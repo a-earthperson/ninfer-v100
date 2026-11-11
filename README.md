@@ -264,6 +264,16 @@ docker run --rm \
   --vision
 ```
 
+`docker-compose.yml` runs the same profile without a host model directory: when
+`NINFER_MODEL_REPO` and `NINFER_MODEL_FILE` are set, the image entrypoint downloads that artifact
+into the `models` named volume at container start (skipped once present) and then runs the
+command. Set `HF_TOKEN` in the environment for gated repositories.
+
+```bash
+docker compose up -d
+docker compose logs -f ninfer-serve
+```
+
 ## Capabilities and limits
 
 All registered model IDs support:

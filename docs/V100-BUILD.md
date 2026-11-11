@@ -173,15 +173,11 @@ launch recipe, verified capacity limits, and benchmarks:
 
 ## Docker
 
-A runtime image with the prebuilt server binary is documented in
-[`docker/README.md`](../docker/README.md): download the release tarball,
-`docker build -t ninfer-v100 .`, then one `docker run --gpus all` (or
-`docker compose up -d`). Windows hosts work the same way via Docker Desktop
-(WSL2 backend). The V100 (sm_70) requirement is unchanged.
+The root `Dockerfile` builds `ninfer` and `ninfer-serve` from source for sm_70 with CUDA 12.8, and
+`docker-compose.yml` downloads the configured artifact into a named volume at container start
+before serving. See [Docker](../README.md#docker) in the README. The V100 (sm_70) requirement is
+unchanged.
 
-**Updating an existing install** (Docker or source build): `git pull`, grab the
-latest prebuilt binary from the
-[Releases page](../../releases) - **v2 or newer is required for `nvfp4-mixed`
-artifacts; the v1 binary predates that profile** - then rebuild the image (or
-`cmake --build build-v100`) and restart. Model volumes/artifacts are untouched
-by the update; v2/official-v3/mixed artifacts all keep loading.
+**Updating an existing install** (Docker or source build): `git pull`, then rebuild the image (or
+`cmake --build build-v100`) and restart. Model volumes/artifacts are untouched by the update;
+v2/official-v3/mixed artifacts all keep loading.
