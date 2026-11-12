@@ -536,6 +536,9 @@ int run_fp8() {
 #endif
     failures += run_fp8_oracle_case(parent, 10, 1, {8}, ops::LinearPolicy::A16Only, 1781U);
     failures += run_fp8_oracle_case(parent, 11, 1, {9}, ops::LinearPolicy::A16Only, 1791U);
+    // 32 aggregate columns stay on the Volta QPN route; 48 cross into its CUTLASS route.
+    failures += run_fp8_oracle_case(parent, 16, 2, {16, 11}, ops::LinearPolicy::A16Only, 1831U);
+    failures += run_fp8_oracle_case(parent, 16, 3, {16, 9, 4}, ops::LinearPolicy::A16Only, 1841U);
 #ifndef NINFER_VOLTA_BUILD
     failures += run_fp8_oracle_case(parent, 3, 2, {3, 1}, ops::LinearPolicy::AllowA8, 1801U);
     failures += run_fp8_oracle_case(parent, 4, 2, {4, 2}, ops::LinearPolicy::AllowA8, 1811U);

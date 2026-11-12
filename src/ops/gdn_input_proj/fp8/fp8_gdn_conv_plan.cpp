@@ -53,6 +53,13 @@ Fp8GdnConvPlan b1_a16_plan(std::int32_t width) {
 
 bool materialized(Fp8GdnConvPlan plan) { return plan.schedule != Fp8GdnConvScheduleId::FusedA16; }
 
+// Materialized A16 projections run fp8_gdn_input_a16_dispatch, whose Volta route switches from
+// QPN staging to the CUTLASS GEMM (projected rows plus GEMM scratch) at large aggregate widths.
+std::size_t a16_projection_capacity(std::int32_t aggregate_columns) {
+    return fp8_gdn_input_workspace_capacity_bytes(LinearPolicy::A16Only, aggregate_columns,
+                                                  aggregate_columns);
+}
+
 std::size_t snapshot_capacity(Fp8GdnConvPlan maximum_plan, std::int32_t materialized_columns,
                               std::int32_t maximum_columns) {
     if (materialized_columns == 0) { return 0; }
@@ -60,11 +67,9 @@ std::size_t snapshot_capacity(Fp8GdnConvPlan maximum_plan, std::int32_t material
     (void)allocate_projected(layout, materialized_columns);
     if (maximum_plan.schedule == Fp8GdnConvScheduleId::MaterializedA8) {
         (void)allocate_fp8_a8_workspace(layout, maximum_columns, Fp8GdnInputGeometry::kInputRows);
-#ifdef NINFER_VOLTA_BUILD
-    } else {
-        (void)layout.alloc_bytes(static_cast<std::size_t>(Fp8GdnInputGeometry::kInputRows) *
-                                 materialized_columns * sizeof(std::uint16_t));
-#endif
+    } else if (const std::size_t projection = a16_projection_capacity(materialized_columns);
+               projection != 0) {
+        (void)layout.alloc_bytes(projection);
     }
     return layout.peak_bytes(1);
 }
@@ -74,12 +79,9 @@ std::size_t record_capacity(Fp8GdnConvPlan plan, std::int32_t aggregate_columns)
         return fp8_a8_workspace_capacity_bytes(aggregate_columns,
                                                 Fp8GdnInputGeometry::kInputRows);
     }
-#ifdef NINFER_VOLTA_BUILD
     if (plan.schedule == Fp8GdnConvScheduleId::MaterializedA16) {
-        return static_cast<std::size_t>(Fp8GdnInputGeometry::kInputRows) * aggregate_columns *
-               sizeof(std::uint16_t);
+        return a16_projection_capacity(aggregate_columns);
     }
-#endif
     return 0;
 }
 

@@ -66,7 +66,8 @@ COPY --from=build /build/apps/ninfer-serve /usr/local/bin/ninfer-serve
 COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/ninfer-entrypoint
 
 ENV NINFER_MODEL_DIR=/models \
-    HF_HOME=/var/cache/huggingface
+    HF_HOME=/var/cache/huggingface \
+    HF_HUB_DISABLE_UPDATE_CHECK=1
 VOLUME ["/models", "/var/cache/huggingface"]
 
 WORKDIR /workspace

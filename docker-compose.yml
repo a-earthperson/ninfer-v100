@@ -1,5 +1,24 @@
 name: ninfer
 
+x-qwen-thinking-on: &qwen-thinking-on
+  --temperature 0.6
+  --min-p 0.0
+  --top-p 0.95
+  --top-k 20
+  --presence-penalty 0.0
+  --frequency-penalty 1.0
+  --preserve-thinking
+
+## default mode to serve
+x-qwen-thinking-off: &qwen-thinking-off
+  --temperature 0.7
+  --min-p 0.0
+  --top-p 0.80
+  --top-k 20
+  --presence-penalty 1.5
+  --frequency-penalty 1.0
+  --no-thinking
+
 services:
   ninfer-serve:
     image: ghcr.io/a-earthperson/ninfer-v100:v1.0.1
@@ -7,26 +26,35 @@ services:
       context: .
     pull_policy: missing
     restart: unless-stopped
+    ipc: host
     environment:
       NINFER_MODEL_REPO: neroued/Qwen3.8-27B-nvfp4-NInfer
       NINFER_MODEL_FILE: qwen3_8_27b_nvfp4.ninfer
       HF_TOKEN: ${HF_TOKEN:-}
     command: >-
       ninfer-serve /models/qwen3_8_27b_nvfp4.ninfer
+      --temperature 0.3
+      --top-k 20
+      --min-p 0.0
+      --top-p 0.95
+      --presence-penalty 0.1
+      --frequency-penalty 0.0
+      --max-context 131072
+      --max-concurrency 2
+      --prefill-chunk 4096
+      --device-state-slots 4
+      --kv-dtype int8
+      --spec mtp --draft-tokens 3
+      --seed 372
+      --media-preprocess-threads 24
+      --kv-capacity auto
+      --pending-timeout-ms 120000
+      --host-state-slots 8
+      --host-kv-mib 16384
+      --lm-head-draft
+      --vision
       --host 0.0.0.0
       --port 8080
-      --max-context 240000
-      --prefill-chunk 2048
-      --kv-capacity auto
-      --max-concurrency 1
-      --kv-dtype int8
-      --device-state-slots 1
-      --host-state-slots 8
-      --host-kv-mib 8192
-      --spec mtp --draft-tokens 4
-      --lm-head-draft
-      --preserve-thinking
-      --vision
     ports:
       - "8080:8080"
     volumes:
