@@ -949,20 +949,18 @@ int run_fp8() {
 #endif
     failures += run_fp8_case(parent, 10, ops::LinearPolicy::A16Only, 11);
     failures += run_fp8_case(parent, 11, ops::LinearPolicy::A16Only, 12);
-#ifndef NINFER_VOLTA_BUILD
-    failures += run_fp8_case(parent, 17, ops::LinearPolicy::AllowA8, 1);
-
     const auto run_batched = [&](std::int32_t width, std::int32_t batch,
-                                 std::vector<std::int32_t> valid_columns, std::uint32_t seed) {
+                                 std::vector<std::int32_t> valid_columns, ops::LinearPolicy policy,
+                                 std::uint32_t seed) {
         const std::vector<float> conv_weight = make_conv_weight(kChannels, seed);
-        const bool uses_a8                   = width * batch >= 9;
+        const bool uses_a8 = policy == ops::LinearPolicy::AllowA8 && width * batch >= 9;
         const std::size_t workspace_bytes =
             ops::gdn_input_proj_conv_snapshot_workspace_capacity_bytes(
-                QType::FP8_E4M3FN_ROW_BF16S, kRows, kHidden, ops::LinearPolicy::AllowA8, batch,
-                width, width);
+                QType::FP8_E4M3FN_ROW_BF16S, kRows, kHidden, policy, batch, width, width);
         return run_batched_case(
-            "FP8 AllowA8 B=" + std::to_string(batch) + " W=" + std::to_string(width), kHidden,
-            kValueRows, kZRows, width, batch, std::move(valid_columns), conv_weight,
+            std::string("FP8 ") + (uses_a8 ? "A8" : "A16") + " B=" + std::to_string(batch) +
+                " W=" + std::to_string(width),
+            kHidden, kValueRows, kZRows, width, batch, std::move(valid_columns), conv_weight,
             workspace_bytes,
             uses_a8 ? kFp8GdnInputProjConvSnapshotA8Tolerance
                     : kFp8GdnInputProjConvSnapshotA16Tolerance,
@@ -980,14 +978,19 @@ int run_fp8() {
                 const Tensor& initial, const Tensor& snapshot_base, Tensor& q, Tensor& k, Tensor& v,
                 Tensor& z, WorkspaceArena& workspace) {
                 ops::gdn_input_proj_conv_snapshot(x, parent.view(), conv, state, valid, initial,
-                                                  snapshot_base, q, k, v, z,
-                                                  ops::LinearPolicy::AllowA8, workspace, nullptr);
+                                                  snapshot_base, q, k, v, z, policy, workspace,
+                                                  nullptr);
             });
     };
-    failures += run_batched(4, 2, {4, 2}, 937U);
-    failures += run_batched(16, 8, {16, 13, 11, 7, 5, 3, 2, 1}, 941U);
-    failures += parent.verify_preserved("batched FP8 parent weight");
+    // 32 aggregate columns stay on the Volta QPN route; 48 cross into its CUTLASS route.
+    failures += run_batched(16, 2, {16, 11}, ops::LinearPolicy::A16Only, 943U);
+    failures += run_batched(16, 3, {16, 9, 4}, ops::LinearPolicy::A16Only, 947U);
+#ifndef NINFER_VOLTA_BUILD
+    failures += run_fp8_case(parent, 17, ops::LinearPolicy::AllowA8, 1);
+    failures += run_batched(4, 2, {4, 2}, ops::LinearPolicy::AllowA8, 937U);
+    failures += run_batched(16, 8, {16, 13, 11, 7, 5, 3, 2, 1}, ops::LinearPolicy::AllowA8, 941U);
 #endif
+    failures += parent.verify_preserved("batched FP8 parent weight");
     return failures;
 }
 

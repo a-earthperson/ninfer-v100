@@ -1,0 +1,82 @@
+name: ninfer
+
+x-qwen-thinking-on: &qwen-thinking-on
+  --temperature 0.6
+  --min-p 0.0
+  --top-p 0.95
+  --top-k 20
+  --presence-penalty 0.0
+  --frequency-penalty 1.0
+  --preserve-thinking
+
+## default mode to serve
+x-qwen-thinking-off: &qwen-thinking-off
+  --temperature 0.7
+  --min-p 0.0
+  --top-p 0.80
+  --top-k 20
+  --presence-penalty 1.5
+  --frequency-penalty 1.0
+  --no-thinking
+
+services:
+  ninfer-serve:
+    image: ghcr.io/a-earthperson/ninfer-v100:v1.0.1
+    build:
+      context: .
+    pull_policy: missing
+    restart: unless-stopped
+    ipc: host
+    environment:
+      NINFER_MODEL_REPO: neroued/Qwen3.8-27B-nvfp4-NInfer
+      NINFER_MODEL_FILE: qwen3_8_27b_nvfp4.ninfer
+      HF_TOKEN: ${HF_TOKEN:-}
+    command: >-
+      ninfer-serve /models/qwen3_8_27b_nvfp4.ninfer
+      --temperature 0.3
+      --top-k 20
+      --min-p 0.0
+      --top-p 0.95
+      --presence-penalty 0.1
+      --frequency-penalty 0.0
+      --max-context 131072
+      --max-concurrency 2
+      --prefill-chunk 4096
+      --device-state-slots 4
+      --kv-dtype int8
+      --spec mtp --draft-tokens 3
+      --seed 372
+      --media-preprocess-threads 24
+      --kv-capacity auto
+      --pending-timeout-ms 120000
+      --host-state-slots 8
+      --host-kv-mib 16384
+      --lm-head-draft
+      --vision
+      --host 0.0.0.0
+      --port 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - models:/models
+      - hf-cache:/var/cache/huggingface
+    ulimits:
+      memlock: -1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60m
+    stop_grace_period: 60s
+
+volumes:
+  models:
+  hf-cache:

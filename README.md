@@ -1,3 +1,7 @@
+**English** | [简体中文](README.zh-CN.md)
+
+> **ninfer-v3-v100** — a maintained fork of [geoffwatts/ninfer-v100](https://github.com/geoffwatts/ninfer-v100) (the Tesla V100 fork of [Neroued/ninfer](https://github.com/Neroued/ninfer)) that adds **direct support for upstream v3 `.ninfer` artifacts** — official downloads such as [neroued/Qwen3.8-27B-nvfp4-NInfer](https://huggingface.co/neroued/Qwen3.8-27B-nvfp4-NInfer) run without conversion. For the verified V100 build recipe, runtime flags, and MTP benchmark data see [docs/V100-BUILD.md](docs/V100-BUILD.md). This fork is not affiliated with or endorsed by the upstream authors.
+
 # NInfer
 
 > Up to 219 decode tok/s from Qwen 3.8 27B on a single V100.  With software NVFP4 on Volta.
@@ -14,10 +18,13 @@ It supports text, image, and video input through a local CLI or OpenAI-/Anthropi
 | Qwen3.6-27B | `nvfp4` | `qwen3_6_27b_nvfp4.ninfer` | [Qwen3.6-27B NVFP4](https://huggingface.co/neroued/Qwen3.6-27B-nvfp4-NInfer) |
 | Qwen3.8-27B | `groupwise-int` | `qwen3_8_27b.ninfer` | [Qwen3.8-27B](https://huggingface.co/neroued/Qwen3.8-27B-NInfer) |
 | Qwen3.8-27B | `nvfp4` | `qwen3_8_27b_nvfp4.ninfer` | [Qwen3.8-27B NVFP4](https://huggingface.co/neroued/Qwen3.8-27B-nvfp4-NInfer) |
+| Qwen3.8-27B | `nvfp4-mixed` | `qwen3_8_27b_nvfp4_EfficientThink_K3.ninfer` | [Qwen3.8-27B EfficientThink-K3 MTP (ModelScope)](https://www.modelscope.cn/models/chengxian7788/Qwen3.8-27B-EfficientThink-K3-MTP-NVFP4-Ninfer) |
 | Qwen3.6-35B-A3B | `groupwise-int` | `qwen3_6_35b_a3b.ninfer` | [Qwen3.6-35B-A3B](https://huggingface.co/neroued/Qwen3.6-35B-A3B-NInfer) |
 
 Artifacts contain the exact model weights, tokenizer, chat template, and required media frontend resources.
 
+
+> Community checkpoint **Qwen3.8-27B EfficientThink-K3-MTP-NVFP4** (`nvfp4-mixed`, FP8 projections + per-module NVFP4/FP8 MLP): download from [ModelScope](https://www.modelscope.cn/models/chengxian7788/Qwen3.8-27B-EfficientThink-K3-MTP-NVFP4-Ninfer), release notes and V100 benchmarks in [docs/QWEN38-27B-EFFICIENTTHINK-K3.md](docs/QWEN38-27B-EFFICIENTTHINK-K3.md).
 ## Performance
 
 Qwen3.8-27B NVFP4 reaches **218.98 decode tok/s** at K=1, with 99.2% MTP draft acceptance.
@@ -255,6 +262,16 @@ docker run --rm \
   --lm-head-draft \
   --preserve-thinking \
   --vision
+```
+
+`docker-compose.yml` runs the same profile without a host model directory: when
+`NINFER_MODEL_REPO` and `NINFER_MODEL_FILE` are set, the image entrypoint downloads that artifact
+into the `models` named volume at container start (skipped once present) and then runs the
+command. Set `HF_TOKEN` in the environment for gated repositories.
+
+```bash
+docker compose up -d
+docker compose logs -f ninfer-serve
 ```
 
 ## Capabilities and limits
